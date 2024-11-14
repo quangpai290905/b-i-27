@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Media Upload and Access</title>
+  <link rel="stylesheet" href="Bài 27.css">
+</head>
+<body>
+
+<h2>Media Upload and Access</h2>
+
+<!-- Upload Image -->
+<h3>Upload Image (JPEG)</h3>
+<input type="file" id="file-input-image" accept="image/jpeg">
+<div id="progress-bar-image">
+  <div></div>
+</div>
+<img id="preview-image" alt="Preview Image">
+<div id="image-info"></div>
+
+<!-- Upload Video -->
+<h3>Upload Video (MP4)</h3>
+<input type="file" id="file-input-video" accept="video/mp4">
+<div id="progress-bar-video">
+  <div></div>
+</div>
+<video id="preview-video" controls></video>
+<div id="video-info"></div>
+
+<!-- Camera Access -->
+<h3>Access Local Camera</h3>
+<button id="camera-button">Start Camera</button>
+<button id="stop-camera-button" disabled>Stop Camera</button>
+<video id="camera-preview" autoplay></video>
+<canvas id="camera-capture" style="display: none;"></canvas>
+<img id="captured-image" alt="Captured Image" style="display: none;">
+
+<!-- Microphone Recording -->
+<h3>Record Audio</h3>
+<button id="record-audio-button">Start Recording</button>
+<button id="stop-audio-button" disabled>Stop Recording</button>
+<audio id="audio-playback" controls></audio>
+
+<script>
+   // Upload Image
+   const fileInputImage = document.getElementById('file-input-image');
+   const previewImage = document.getElementById('preview-image');
+   const progressBarImage = document.getElementById('progress-bar-image');
+   const progressImage = progressBarImage.querySelector('div');
+   const imageInfo = document.getElementById('image-info');
+ 
+   fileInputImage.addEventListener('change', async (event) => {
+     const file = event.target.files[0];
+     if (file && file.type === 'image/jpeg') {
+       progressBarImage.style.display = 'block';
+       progressImage.style.width = '0%';
+       previewImage.style.display = 'none';
+       imageInfo.textContent = '';
+ 
+       try {
+         const imageUrl = await loadFileWithProgress(file, progressImage);
+         previewImage.src = imageUrl;
+         previewImage.style.display = 'block';
+         imageInfo.textContent = `Image Size: ${(file.size / 1024).toFixed(2)} KB`;
+       } catch (error) {
+         console.error('Error loading image:', error);
+       } finally {
+         progressBarImage.style.display = 'none';
+       }
+     } else {
+       alert('Please upload a JPEG image.');
+     }
+   });
+ 
+   // Upload Video
+   const fileInputVideo = document.getElementById('file-input-video');
+   const previewVideo = document.getElementById('preview-video');
+   const progressBarVideo = document.getElementById('progress-bar-video');
+   const progressVideo = progressBarVideo.querySelector('div');
+   const videoInfo = document.getElementById('video-info');
+ 
+   fileInputVideo.addEventListener('change', async (event) => {
+     const file = event.target.files[0];
+     if (file && file.type === 'video/mp4') {
+       progressBarVideo.style.display = 'block';
+       progressVideo.style.width = '0%';
+       previewVideo.style.display = 'none';
+       videoInfo.textContent = '';
+ 
+       try {
+         const videoUrl = await loadFileWithProgress(file, progressVideo);
+         previewVideo.src = videoUrl;
+         previewVideo.style.display = 'block';
+         videoInfo.textContent = `Video Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`;
+       } catch (error) {
+         console.error('Error loading video:', error);
+       } finally {
+         progressBarVideo.style.display = 'none';
+       }
+     } else {
+       alert('Please upload an MP4 video.');
+     }
+   });
+ 
+   // Load File with Progress (for both image and video)
+   function loadFileWithProgress(file, progressBar) {
+     return new Promise((resolve, reject) => {
+       const reader = new FileReader();
+ 
+       reader.onprogress = (event) => {
+         if (event.lengthComputable) {
+           const percentLoaded = (event.loaded / event.total) * 100;
+           progressBar.style.width = percentLoaded + '%';
+         }
+       };
+ 
+       reader.onload = () => resolve(reader.result);
+       reader.onerror = () => reject(new Error('Failed to load file'));
+ 
+       reader.readAsDataURL(file);
+     });
+   }
+    // Camera Access
+  const cameraButton = document.getElementById('camera-button');
+  const stopCameraButton = document.getElementById('stop-camera-button');
+  const cameraPreview = document.getElementById('camera-preview');
+  const cameraCapture = document.getElementById('camera-capture');
+  const capturedImage = document.getElementById('captured-image');
+  let cameraStream;
+
+  cameraButton.addEventListener('click', async () => {
+    try {
+      cameraStream = await navigator.mediaDevices.getUserMedia({ video: true });
+      cameraPreview.srcObject = cameraStream;
+      cameraPreview.style.display = 'block';
+      stopCameraButton.disabled = false;
+      cameraButton.disabled = true; // Disable "Start Camera" button
+    } catch (error) {
+      console.error('Error accessing camera:', error);
+      alert('Unable to access the camera.');
+    }
+  });
+
+  stopCameraButton.addEventListener('click', () => {
+    // Stop camera stream
+    if (cameraStream) {
+      const tracks = cameraStream.getTracks();
+      tracks.forEach(track => track.stop());
+      cameraStream = null;
+      cameraPreview.style.display = 'none';
+      stopCameraButton.disabled = true;
+      cameraButton.disabled = false;
+    }
+    
+    // Capture image from video
+    cameraCapture.width = cameraPreview.videoWidth;
+    cameraCapture.height = cameraPreview.videoHeight;
+    const context = cameraCapture.getContext('2d');
+    context.drawImage(cameraPreview, 0, 0, cameraCapture.width, cameraCapture.height);
+
+    // Display the captured image
+    capturedImage.src = cameraCapture.toDataURL('image/png');
+    capturedImage.style.display = 'block';
+  });
+
+  // Additional existing code for image, video, and audio interactions...
+
+</script>
+
+</body>
+</html>
